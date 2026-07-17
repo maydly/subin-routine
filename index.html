@@ -536,7 +536,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut as fbSignOut }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc,
     onSnapshot, query, where, orderBy, addDoc, updateDoc, serverTimestamp }
@@ -644,8 +644,23 @@
 
   // 전역 함수 노출
   window.signInWithGoogle = async () => {
+    // 모바일·인앱 브라우저는 팝업이 자주 차단돼 리다이렉트 방식이 안전
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      try { await signInWithRedirect(auth, provider); }
+      catch(e) { showToast('로그인 실패: ' + e.message); }
+      return;
+    }
     try { await signInWithPopup(auth, provider); }
-    catch(e) { showToast('로그인 실패: ' + e.message); }
+    catch(e) {
+      // 데스크탑에서도 팝업이 막히면 리다이렉트로 폴백
+      if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(e.code)) {
+        try { await signInWithRedirect(auth, provider); }
+        catch(e2) { showToast('로그인 실패: ' + e2.message); }
+      } else {
+        showToast('로그인 실패: ' + e.message);
+      }
+    }
   };
   window.signOut = async () => {
     [unsubGoals, unsubLogs, unsubNotifs].forEach(u => u?.());
@@ -793,6 +808,8 @@
   });
 
   // 인증
+  // 모바일 리다이렉트 로그인 결과 처리(성공 시 onAuthStateChanged가 이어받음)
+  getRedirectResult(auth).catch(e => showToast('로그인 오류: ' + e.message));
   onAuthStateChanged(auth, async (user) => {
     document.getElementById('loading-screen').style.display = 'none';
     if(!user) {
