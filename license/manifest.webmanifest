@@ -1,0 +1,17 @@
+{
+  "name": "수빈 면허 필기 문제풀이",
+  "short_name": "면허 필기",
+  "description": "운전면허 필기시험 실전 문제풀이 — 즉시 채점, 문제은행 랜덤 출제",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7f2",
+  "theme_color": "#c98a5e",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
