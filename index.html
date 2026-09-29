@@ -814,6 +814,83 @@
     el.addEventListener('click', e => { if(e.target===el) closeModal(el.id); });
   });
 
+  // ===== maydly 통합 로그인 (260929) =====
+  // 명진(260929): "통합해서 하나로 쓸 땐 한 번만 해야지 — 100개면 100개 다 로그인하면서 쓰라고?"
+  // maydly.github.io 안의 앱끼리 구글 로그인을 한 기기에서 한 번만 하게 하는 「추가」 블록.
+  // 위아래 기존 로그인·데이터(Firestore) 코드는 한 줄도 바꾸지 않았다.
+  //  · 로그인 기록을 홈·설문·명진앱·관리자 캘린더처럼 localStorage 에 둔다(setPersistence).
+  //    같은 기본[DEFAULT] 로그인을 쓰는 홈·설문·수빈 앱과 탭 사이에서 서로 로그인을 지우지 않게.
+  //  · 이 앱(기본[DEFAULT])에 로그인이 없으면, 같은 Firebase 프로젝트의 다른 이름
+  //    (관리자 캘린더 "mjcal" · 명진앱 "saju" · 사진맵 "pmview" 등)에 남은 허용 계정(명진·수빈) 로그인을
+  //    이 앱으로 복사한다(updateCurrentUser). 허용 계정이 아니면 복사하지 않는다(루틴앱 사용자 자동 등록 방지).
+  //    다른 앱의 기록은 localStorage 한 곳으로만 열어 읽기만 한다(옮기지 않음. 취소된 로그인이면 그 앱이 열릴 때처럼 SDK가 정리).
+  //  · 복사를 확인하는 동안(최대 3.5초) 로그인 화면 대신 로딩 화면을 유지해 깜빡임을 막는다.
+  //  · 이 앱에서 새로 로그인하면 원래 기본[DEFAULT]이라 홈·설문이 그대로 쓴다(추가 복사 불필요).
+  //  · Firestore 보안규칙은 그대로 — 로그인 없이 데이터가 보이지 않는다.
+  // 되돌리기: 이 블록(「블록 끝」 줄까지)을 통째로 지우면 원래대로.
+  import { getApps as ssoGetApps, deleteApp as ssoDeleteApp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { initializeAuth as ssoInitAuth, setPersistence as ssoSetPersistence,
+    updateCurrentUser as ssoUpdateCurrentUser, browserLocalPersistence as ssoLocal }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  (() => {
+    // Firebase 호스팅 사본(*.web.app 등)은 출처가 달라 해당 없음 — 기존 그대로 둔다
+    if (/(^|\.)(web\.app|firebaseapp\.com)$/.test(location.hostname)) return;
+    const SSO_ALLOWED = ['bucket0825@gmail.com', 'ara030820@gmail.com'];   // 명진 · 수빈
+    const SSO_PREFIX = 'firebase:authUser:' + firebaseConfig.apiKey + ':';
+    const okEmail = (em) => typeof em === 'string' && SSO_ALLOWED.includes(em.trim().toLowerCase());
+    try { ssoSetPersistence(auth, ssoLocal).catch(() => {}); } catch (e) {}
+    // 확인하는 동안 로그인 화면을 가리고 로딩 화면을 유지
+    const hold = document.createElement('style');
+    hold.id = 'maydly-sso-hold';
+    hold.textContent = '#login-screen{display:none!important}#loading-screen{display:flex!important}';
+    document.head.appendChild(hold);
+    let released = false;
+    const release = () => { if (released) return; released = true; hold.remove(); };
+    const timer = setTimeout(release, 3500);
+    const bridge = async () => {
+      await auth.authStateReady();
+      if (auth.currentUser) return false;               // 이미 로그인 → 기존 그대로
+      // 이 기기에 남은 다른 이름의 로그인 기록(허용 계정만), 최근 로그인 순
+      const cands = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || !k.startsWith(SSO_PREFIX)) continue;
+          const name = k.slice(SSO_PREFIX.length);
+          if (!name || name === app.name) continue;
+          let rec = null; try { rec = JSON.parse(localStorage.getItem(k)); } catch (e) {}
+          if (rec && okEmail(rec.email)) cands.push({ name, t: Number(rec.lastLoginAt) || 0 });
+        }
+      } catch (e) {}
+      cands.sort((a, b) => b.t - a.t);
+      for (const c of cands) {
+        if (auth.currentUser) return false;             // 그 사이 직접 로그인했으면 그대로
+        let made = null;
+        try {
+          let other = ssoGetApps().find(a => a.name === c.name), otherAuth;
+          if (other) otherAuth = getAuth(other);
+          else {
+            made = other = initializeApp(firebaseConfig, c.name);
+            otherAuth = ssoInitAuth(other, { persistence: ssoLocal });
+          }
+          await otherAuth.authStateReady();
+          const u = otherAuth.currentUser;
+          if (u && okEmail(u.email) && !auth.currentUser) {
+            await ssoUpdateCurrentUser(auth, u);
+            return true;
+          }
+        } catch (e) {
+        } finally {
+          if (made) ssoDeleteApp(made).catch(() => {});
+        }
+      }
+      return false;
+    };
+    bridge().catch(() => false).then(ok => { clearTimeout(timer); setTimeout(release, ok ? 60 : 0); });
+  })();
+  // ===== 블록 끝: maydly 통합 로그인 (260929) =====
+
   // 인증
   // 모바일 리다이렉트 로그인 결과 처리(성공 시 onAuthStateChanged가 이어받음)
   getRedirectResult(auth).catch(e => showToast('로그인 오류: ' + e.message));
