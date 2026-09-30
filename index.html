@@ -322,6 +322,15 @@
 
   .empty-state { text-align: center; padding: 48px 16px; color: var(--ink-soft); }
   .empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* 260930 아이폰 입력칸 확대 방지(추가만) — 입력 글씨가 16px 보다 작으면 아이폰 사파리가 누를 때 화면을 확대한다.
+     휴대폰(좁은 화면·터치)에서만 16px 로 올리고, 글씨가 커진 만큼 위아래 여백을 줄여 칸 높이는 그대로 둔다.
+     데스크톱(넓은 화면+마우스)은 이 블록이 적용되지 않아 모양이 그대로다. */
+  @media (max-width: 900px), (pointer: coarse) {
+    .form-input, .form-select { font-size: 16px; padding-top: 11.2px; padding-bottom: 11.2px; }
+    /* min-width:0 — 글씨가 커지면 입력칸의 최소폭도 커져, 320px 폭(SE·확대 보기)에서 옆 「저장」 버튼이 눌려 두 줄로 꺾였다. 이를 막는다. */
+    .ai-key-input { font-size: 16px; padding-top: 8.45px; padding-bottom: 8.45px; min-width: 0; }
+  }
 </style>
 </head>
 <body>

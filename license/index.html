@@ -170,6 +170,16 @@
   .rask .raskb{font-size:12px; font-weight:800; padding:6px 12px; border-radius:8px; border:none;
     background:var(--blue); color:#fff; cursor:pointer;}
   .rask .raskm{font-size:12px; font-weight:700; color:var(--good);}
+
+  /* ── 아이폰 입력칸 확대 방지 (260930 추가) ──
+     아이폰 사파리는 입력 글씨가 16px 보다 작으면 칸을 누를 때 화면을 확대한다.
+     폰·태블릿(좁은 화면 또는 손가락 터치)에서만 16px 로 맞추고, 데스크톱 모양은 그대로 둔다. */
+  @media (max-width:900px), (pointer:coarse){
+    input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=submit]):not([type=reset]):not([type=color]):not([type=file]):not([type=image]),
+    textarea, select{font-size:16px !important;}
+    /* 결과 화면 질문 칸: 글씨가 커져 안내문이 두 줄이 되므로 줄 간격만 살짝 띄워 아래가 끼지 않게 */
+    .rask textarea{line-height:1.4;}
+  }
 </style>
 </head>
 <body>

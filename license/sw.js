@@ -1,6 +1,6 @@
 /* 수빈 면허 필기 PWA — 오프라인 캐시 서비스워커
    내용을 바꾸면 아래 CACHE 버전 숫자를 올려야 폰에서 새로 받는다. */
-const CACHE = "subin-license-v1";
+const CACHE = "subin-license-v2";
 const ASSETS = [
   "./",
   "./index.html",
